@@ -1,4 +1,5 @@
-# Maintainer:  Devin Cofer <ranguvar[at]ranguvar[dot]io>
+# Maintainer:  Vladislav Nepogodin (vnepogodin) <vnepogodin@cachyos.org>
+# Contributor: Devin Cofer <ranguvar[at]ranguvar[dot]io>
 # Contributor: Kyle De'Vir (QuartzDragon) <kyle[dot]devir[at]mykolab[dot]com>
 # Contributor: Jonas Heinrich <onny@project-insanity.org>
 # Contributor: Maxwell Anselm <silverhammermba+aur@gmail.com>
@@ -6,7 +7,7 @@
 # Contributor: Ionut Biru <ibiru@archlinux.org>
 # Contributor: Jakub Schmidtke <sjakub@gmail.com>
 
-pkgname=firefox-wayland-hg
+pkgname=firefox-wayland-cachy-hg
 _pkgname=firefox
 pkgver=r659341.4e0bb3e
 pkgrel=1
@@ -15,7 +16,7 @@ arch=(x86_64)
 license=(MPL GPL LGPL)
 url="https://www.mozilla.org/firefox/"
 depends=(gtk3 libxt mime-types dbus-glib
-         ffmpeg nss-hg ttf-font libpulse xorg-server-xwayland
+         ffmpeg ttf-font libpulse xorg-server-xwayland
          libvpx libwebp libjpeg zlib libevent pipewire)
 makedepends=(git-cinnabar unzip zip diffutils yasm mesa imake inetutils
              xorg-server-xvfb autoconf2.13 rust clang llvm jack nodejs cbindgen nasm
@@ -108,8 +109,6 @@ ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
 ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
 
 # System libraries
-ac_add_options --with-system-nspr
-ac_add_options --with-system-nss
 ac_add_options --with-system-libvpx
 ac_add_options --with-system-webp
 ac_add_options --with-system-libevent
