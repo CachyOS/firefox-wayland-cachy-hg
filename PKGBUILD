@@ -79,28 +79,26 @@ ac_add_options --enable-hardening
 ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
 ac_add_options --enable-linker=lld
+ac_add_options --enable-lto
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
-ac_add_options --disable-tests
-ac_add_options --enable-lto
+ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
 ac_add_options MOZ_PGO=1
-export CC=clang
-export CXX=clang++
+
 export AR=llvm-ar
+export CC='clang'
+export CXX='clang++'
 export NM=llvm-nm
 export RANLIB=llvm-ranlib
 
-# wasi sdk
-ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
-
 # Branding
 ac_add_options --enable-official-branding
-ac_add_options --enable-update-channel=release
+ac_add_options --enable-update-channel=nightly
 ac_add_options --with-distribution-id=org.archlinux
 ac_add_options --with-unsigned-addon-scopes=app,system
 export MOZILLA_OFFICIAL=1
 export MOZ_APP_REMOTINGNAME=${_pkgname//-/}
-export MOZ_TELEMETRY_REPORTING=1
 export MOZ_REQUIRE_SIGNING=1
 
 # Keys
@@ -115,13 +113,31 @@ ac_add_options --with-system-libevent
 ac_add_options --with-system-zlib
 ac_add_options --with-system-jpeg
 
+ac_add_options --enable-optimize=-O3
 # Features
+ac_add_options --enable-jxl
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-alsa
 ac_add_options --enable-jack
-ac_add_options --enable-crashreporter
+ac_add_options --disable-warnings-as-errors
+ac_add_options --disable-crashreporter
+ac_add_options --disable-tests
+ac_add_options --disable-debug
 ac_add_options --disable-updater
-ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
+ac_add_options --enable-strip
+ac_add_options --disable-synth-speechd
+ac_add_options --disable-debug-symbols
+ac_add_options --disable-debug-js-modules
+ac_add_options --disable-rust-tests
+ac_add_options --disable-necko-wifi
+ac_add_options --disable-webspeech
+ac_add_options --disable-webspeechtestbackend
+
+# Disables crash reporting, telemetry and other data gathering tools
+mk_add_options MOZ_CRASHREPORTER=0
+mk_add_options MOZ_DATA_REPORTING=0
+mk_add_options MOZ_SERVICES_HEALTHREPORT=0
+mk_add_options MOZ_TELEMETRY_REPORTING=0
 END
 
   # See https://github.com/glandium/git-cinnabar/issues/311
@@ -141,7 +157,9 @@ build() {
   # LTO/PGO needs more open files
   ulimit -n 4096
 
-  xvfb-run -a -n 97 -s "-screen 0 1600x1200x24" ./mach build
+  xvfb-run -a -n 97 -s "-screen 0 1920x1080x24" ./mach build
+
+  echo "Building symbol archive..."
   ./mach buildsymbols
 }
 
