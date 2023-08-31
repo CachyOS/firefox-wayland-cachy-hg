@@ -52,7 +52,8 @@ _mozilla_api_key=16674381-f021-49de-8622-3021c5942aff
 
 pkgver() {
   cd mozilla-unified
-  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+  _pkgver=$(cat browser/config/version.txt)
+  printf "${_pkgver}.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
 }
 
 prepare() {
