@@ -13,27 +13,71 @@ pkgver=r659341.4e0bb3e
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org (mozilla-unified hg, release branding, targeting wayland)"
 arch=(x86_64)
-license=(MPL GPL LGPL)
+license=(MPL-2.0)
 url="https://www.mozilla.org/firefox/"
-depends=(gtk3 libxt mime-types dbus-glib
-         ffmpeg ttf-font libpulse xorg-server-xwayland
-         libvpx libwebp libjpeg zlib libevent pipewire)
-makedepends=(git-cinnabar unzip zip diffutils yasm mesa imake inetutils
-             xorg-server-xvfb autoconf2.13 rust clang llvm jack nodejs cbindgen nasm
-             python-setuptools lld dump_syms
-             wasi-compiler-rt wasi-libc wasi-libc++ wasi-libc++abi)
-optdepends=('networkmanager: Location detection via available WiFi networks'
-            'libnotify: Notification integration'
-            'pulseaudio: Audio support'
-            'speech-dispatcher: Text-to-Speech'
-            'hunspell-en_US: Spell checking, American English'
-            'xdg-desktop-portal: Screensharing with Wayland')
-options=(!emptydirs !makeflags !strip !lto)
+depends=(
+  dbus
+  ffmpeg
+  gtk3
+  libevent
+  libjpeg
+  libpulse
+  libvpx
+  libwebp
+  libxt
+  mime-types
+  pipewire
+  ttf-font
+  xorg-server-xwayland
+  zlib
+)
+makedepends=(
+  git-cinnabar
+  cbindgen
+  clang
+  diffutils
+  imake
+  inetutils
+  jack
+  lld
+  llvm
+  mesa
+  nasm
+  nodejs
+  python
+  rust
+  unzip
+  wasi-compiler-rt
+  wasi-libc
+  wasi-libc++
+  wasi-libc++abi
+  xorg-server-xvfb
+  yasm
+  zip
+)
+opoptdepends=(
+  'hunspell-en_US: Spell checking, American English'
+  'libnotify: Notification integration'
+  'networkmanager: Location detection via available WiFi networks'
+  'pulseaudio: Audio support'
+  'speech-dispatcher: Text-to-Speech'
+  'xdg-desktop-portal: Screensharing with Wayland'
+)
+options=(
+  !debug
+  !emptydirs
+  !lto
+  !makeflags
+  !strip
+)
 _repo=https://hg.mozilla.org/mozilla-unified
 conflicts=('firefox')
 provides=('firefox')
-source=("mozilla-unified::git+hg::$_repo#branch=bookmarks/autoland"
-        $_pkgname.desktop $_pkgname-symbolic.svg)
+source=(
+  "mozilla-unified::git+hg::$_repo#branch=bookmarks/autoland"
+  $_pkgname.desktop
+  $_pkgname-symbolic.svg
+)
 sha256sums=('SKIP'
             'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
@@ -79,6 +123,7 @@ ac_add_options --enable-release
 ac_add_options --enable-hardening
 ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
+ac_add_options --enable-wasm-simd
 ac_add_options --enable-linker=lld
 ac_add_options --enable-lto
 ac_add_options --disable-elf-hack
@@ -159,15 +204,11 @@ build() {
   ulimit -n 4096
 
   xvfb-run -a -n 97 -s "-screen 0 1920x1080x24" ./mach build
-
-  echo "Building symbol archive..."
-  ./mach buildsymbols
 }
 
 package() {
   cd mozilla-unified
   DESTDIR="$pkgdir" ./mach install
-  find . -name '*crashreporter-symbols.zip' -exec cp -fvt "$startdir" {} +
 
   _vendorjs="$pkgdir/usr/lib/$_pkgname/browser/defaults/preferences/vendor.js"
   install -Dm644 /dev/stdin "$_vendorjs" <<END
