@@ -13,8 +13,12 @@ pkgver=r659341.4e0bb3e
 pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org (mozilla-unified hg, release branding, targeting wayland)"
 arch=(x86_64)
-license=(MPL-2.0)
 url="https://www.mozilla.org/firefox/"
+license=(
+  GPL
+  LGPL
+  MPL
+)
 depends=(
   dbus
   ffmpeg
@@ -24,11 +28,10 @@ depends=(
   libpulse
   libvpx
   libwebp
+  libxss
   libxt
   mime-types
-  pipewire
   ttf-font
-  xorg-server-xwayland
   zlib
 )
 makedepends=(
@@ -54,6 +57,7 @@ makedepends=(
   xorg-server-xvfb
   yasm
   zip
+  pciutils
 )
 opoptdepends=(
   'hunspell-en_US: Spell checking, American English'
@@ -68,7 +72,6 @@ options=(
   !emptydirs
   !lto
   !makeflags
-  !strip
 )
 _repo=https://hg.mozilla.org/mozilla-unified
 conflicts=('firefox')
@@ -117,6 +120,7 @@ prepare() {
 
   cat >.mozconfig <<END
 ac_add_options --enable-application=browser
+mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 
 ac_add_options --prefix=/usr
 ac_add_options --enable-release
@@ -125,12 +129,11 @@ ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
 ac_add_options --enable-wasm-simd
 ac_add_options --enable-linker=lld
-ac_add_options --enable-lto
+ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-ac_add_options MOZ_PGO=1
 
 export AR=llvm-ar
 export CC='clang'
@@ -196,9 +199,9 @@ build() {
 
   export MOZ_SOURCE_REPO="$_repo"
   export MOZ_SOURCE_CHANGESET="$(cd $SRCDEST/mozilla-unified; git cinnabar git2hg bookmarks/autoland)"
-  export MOZ_NOSPAM=1
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
-  export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=none
+  export MOZ_BUILD_DATE="$(date -u${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH} +%Y%m%d%H%M%S)"
+  export MOZ_NOSPAM=1
 
   # malloc_usable_size is used in various parts of the codebase
   CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
@@ -207,7 +210,41 @@ build() {
   # LTO/PGO needs more open files
   ulimit -n 4096
 
-  xvfb-run -a -n 97 -s "-screen 0 1920x1080x24" ./mach build
+  # Do 3-tier PGO
+  echo "Building instrumented browser..."
+
+  cat >.mozconfig ../mozconfig - <<END
+ac_add_options --enable-profile-generate
+END
+
+  ./mach build
+
+  echo "Profiling instrumented browser..."
+  ./mach package
+  LLVM_PROFDATA=llvm-profdata \
+      JARLOG_FILE="$PWD/jarlog" \
+      xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
+      ./mach python build/pgo/profileserver.py
+
+  stat -c "Profile data found (%s bytes)" merged.profdata
+  test -s merged.profdata
+
+  stat -c "Jar log found (%s bytes)" jarlog
+  test -s jarlog
+
+  echo "Removing instrumented browser..."
+  ./mach clobber
+
+  echo "Building optimized browser..."
+
+  cat >.mozconfig ../mozconfig - <<END
+ac_add_options --enable-lto
+ac_add_options --enable-profile-use
+ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
+ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
+END
+
+  ./mach build
 }
 
 package() {
