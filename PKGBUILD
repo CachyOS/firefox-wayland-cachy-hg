@@ -118,7 +118,7 @@ prepare() {
   # `ac_add_options --enable-lto' and ending with 'export RANLIB=llvm-ranlib`
   #
 
-  cat >.mozconfig <<END
+  cat >../mozconfig <<END
 ac_add_options --enable-application=browser
 mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 
