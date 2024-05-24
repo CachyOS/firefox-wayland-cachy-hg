@@ -128,12 +128,15 @@ ac_add_options --enable-hardening
 ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
 ac_add_options --enable-wasm-simd
-ac_add_options --enable-linker=lld
+#ac_add_options --enable-linker=lld
+ac_add_options --enable-lto=cross
+ac_add_options --enable-linker=gold
 ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
+ac_add_options MOZ_PGO=1
 
 export AR=llvm-ar
 export CC='clang'
@@ -163,11 +166,15 @@ ac_add_options --with-system-zlib
 ac_add_options --with-system-jpeg
 
 ac_add_options --enable-optimize=-O3
+ac_add_options OPT_LEVEL="3"
+ac_add_options RUSTC_OPT_LEVEL="3"
 # Features
 ac_add_options --enable-jxl
+ac_add_options --enable-av1
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-alsa
 ac_add_options --enable-jack
+ac_add_options --enable-proxy-bypass-protection
 ac_add_options --disable-warnings-as-errors
 ac_add_options --disable-crashreporter
 ac_add_options --disable-tests
@@ -203,48 +210,21 @@ build() {
   export MOZ_BUILD_DATE="$(date -u${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH} +%Y%m%d%H%M%S)"
   export MOZ_NOSPAM=1
 
+  export LIBGL_ALWAYS_SOFTWARE=true
+
   # malloc_usable_size is used in various parts of the codebase
-  CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-  CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+  export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+  export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+
+  export CFLAGS="${CFLAGS/-fexceptions/-fno-exceptions}"
+  export CXXFLAGS="${CXXFLAGS/-fexceptions/-fno-exceptions}"
 
   # LTO/PGO needs more open files
   ulimit -n 4096
 
-  # Do 3-tier PGO
-  echo "Building instrumented browser..."
+  echo "Building browser..."
 
-  cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-profile-generate
-END
-
-  ./mach build
-
-  echo "Profiling instrumented browser..."
-  ./mach package
-  LLVM_PROFDATA=llvm-profdata \
-      JARLOG_FILE="$PWD/jarlog" \
-      xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
-      ./mach python build/pgo/profileserver.py
-
-  stat -c "Profile data found (%s bytes)" merged.profdata
-  test -s merged.profdata
-
-  stat -c "Jar log found (%s bytes)" jarlog
-  test -s jarlog
-
-  echo "Removing instrumented browser..."
-  ./mach clobber
-
-  echo "Building optimized browser..."
-
-  cat >.mozconfig ../mozconfig - <<END
-ac_add_options --enable-lto
-ac_add_options --enable-profile-use
-ac_add_options --with-pgo-profile-path=${PWD@Q}/merged.profdata
-ac_add_options --with-pgo-jarlog=${PWD@Q}/jarlog
-END
-
-  ./mach build
+  xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" ./mach build
 }
 
 package() {
@@ -265,6 +245,9 @@ pref("browser.shell.checkDefaultBrowser", false);
 // Don't disable our bundled extensions in the application directory
 pref("extensions.autoDisableScopes", 11);
 pref("extensions.shownSelectionUI", true);
+
+// Prevent telemetry notification
+pref("services.settings.main.search-telemetry-v2.last_check", $(date +%s));
 END
 
   _distini="$pkgdir/usr/lib/$_pkgname/distribution/distribution.ini"
