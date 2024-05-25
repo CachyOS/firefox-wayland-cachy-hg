@@ -120,6 +120,7 @@ prepare() {
 
   cat >../mozconfig <<END
 ac_add_options --enable-application=browser
+ac_add_options --disable-artifact-builds
 mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 
 ac_add_options --prefix=/usr
@@ -149,8 +150,10 @@ ac_add_options --enable-official-branding
 ac_add_options --enable-update-channel=nightly
 ac_add_options --with-distribution-id=org.archlinux
 ac_add_options --with-unsigned-addon-scopes=app,system
+ac_add_options --allow-addon-sideload
 export MOZILLA_OFFICIAL=1
 export MOZ_APP_REMOTINGNAME=${_pkgname//-/}
+export NIGHTLY_BUILD=1
 export MOZ_REQUIRE_SIGNING=1
 
 # Keys
@@ -231,6 +234,10 @@ package() {
   cd mozilla-unified
   DESTDIR="$pkgdir" ./mach install
 
+  install -d "$pkgdir/usr/lib/"
+  cp -r "$pkgdir/usr/local/lib/firefox"  "$pkgdir/usr/lib/"
+  rm -rf "$pkgdir/usr/local/lib/firefox/"
+
   _vendorjs="$pkgdir/usr/lib/$_pkgname/browser/defaults/preferences/vendor.js"
   install -Dm644 /dev/stdin "$_vendorjs" <<END
 // Use LANG environment variable to choose locale
@@ -245,6 +252,12 @@ pref("browser.shell.checkDefaultBrowser", false);
 // Don't disable our bundled extensions in the application directory
 pref("extensions.autoDisableScopes", 11);
 pref("extensions.shownSelectionUI", true);
+
+// Enable JPEG XL images
+pref("image.jxl.enabled", true);
+
+// Prevent about:config warning
+pref("browser.aboutConfig.showWarning", false);
 
 // Prevent telemetry notification
 pref("services.settings.main.search-telemetry-v2.last_check", $(date +%s));
