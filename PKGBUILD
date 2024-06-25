@@ -234,10 +234,6 @@ package() {
   cd mozilla-unified
   DESTDIR="$pkgdir" ./mach install
 
-  install -d "$pkgdir/usr/lib/"
-  cp -r "$pkgdir/usr/local/lib/firefox"  "$pkgdir/usr/lib/"
-  rm -rf "$pkgdir/usr/local/lib/firefox/"
-
   _vendorjs="$pkgdir/usr/lib/$_pkgname/browser/defaults/preferences/vendor.js"
   install -Dm644 /dev/stdin "$_vendorjs" <<END
 // Use LANG environment variable to choose locale
