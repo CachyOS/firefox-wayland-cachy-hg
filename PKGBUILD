@@ -59,7 +59,7 @@ makedepends=(
   zip
   pciutils
 )
-opoptdepends=(
+optdepends=(
   'hunspell-en_US: Spell checking, American English'
   'libnotify: Notification integration'
   'networkmanager: Location detection via available WiFi networks'
@@ -118,7 +118,7 @@ prepare() {
   # `ac_add_options --enable-lto' and ending with 'export RANLIB=llvm-ranlib`
   #
 
-  cat >../mozconfig <<END
+  cat >.mozconfig <<END
 ac_add_options --enable-application=browser
 ac_add_options --disable-artifact-builds
 mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
@@ -129,15 +129,15 @@ ac_add_options --enable-hardening
 ac_add_options --enable-optimize
 ac_add_options --enable-rust-simd
 ac_add_options --enable-wasm-simd
-#ac_add_options --enable-linker=lld
-ac_add_options --enable-lto=cross
-ac_add_options --enable-linker=gold
+ac_add_options --enable-linker=lld
+ac_add_options --enable-lto=cross,full
+#ac_add_options --enable-linker=gold
 ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
 ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-ac_add_options MOZ_PGO=1
+#ac_add_options MOZ_PGO=1
 
 export AR=llvm-ar
 export CC='clang'
