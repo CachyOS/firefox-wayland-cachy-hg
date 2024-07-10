@@ -37,23 +37,24 @@ depends=(
 makedepends=(
   git-cinnabar
   cbindgen
-  clang
+  #clang
   diffutils
   imake
   inetutils
   jack
-  lld
-  llvm
+  #lld
+  #llvm
   mesa
   nasm
   nodejs
   python
-  rust
+  rustup
+  #rust
   unzip
-  wasi-compiler-rt
-  wasi-libc
-  wasi-libc++
-  wasi-libc++abi
+  #wasi-compiler-rt
+  #wasi-libc
+  #wasi-libc++
+  #wasi-libc++abi
   xorg-server-xvfb
   yasm
   zip
@@ -63,7 +64,6 @@ optdepends=(
   'hunspell-en_US: Spell checking, American English'
   'libnotify: Notification integration'
   'networkmanager: Location detection via available WiFi networks'
-  'pulseaudio: Audio support'
   'speech-dispatcher: Text-to-Speech'
   'xdg-desktop-portal: Screensharing with Wayland'
 )
@@ -104,6 +104,14 @@ pkgver() {
 }
 
 prepare() {
+  # we need it for bootstap build to be able to build with Firefox toolchain,
+  # for some reason it doesn't bootstrap rust compiler
+  if ! rustc --version | grep stable  >/dev/null 2>&1; then
+    echo "Installing rust compiler…"
+    rustup toolchain install stable
+    rustup default stable
+  fi
+
   mkdir mozbuild
   cd mozilla-unified
 
@@ -134,16 +142,19 @@ ac_add_options --enable-lto=cross,full
 #ac_add_options --enable-linker=gold
 ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
-ac_add_options --disable-bootstrap
-ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+ac_add_options --enable-bootstrap
+#ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+#ac_add_options --with-wasm-sandboxed-libraries
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-#ac_add_options MOZ_PGO=1
+ac_add_options MOZ_PGO=1
+ac_add_options MOZ_LTO=cross,full
+ac_add_options MOZ_USING_WASM_SANDBOXING=1
 
-export AR=llvm-ar
-export CC='clang'
-export CXX='clang++'
-export NM=llvm-nm
-export RANLIB=llvm-ranlib
+#export AR=llvm-ar
+#export CC='clang'
+#export CXX='clang++'
+#export NM=llvm-nm
+#export RANLIB=llvm-ranlib
 
 # Branding
 ac_add_options --enable-official-branding
@@ -162,11 +173,11 @@ ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
 ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
 
 # System libraries
-ac_add_options --with-system-libvpx
-ac_add_options --with-system-webp
-ac_add_options --with-system-libevent
-ac_add_options --with-system-zlib
-ac_add_options --with-system-jpeg
+#ac_add_options --with-system-libvpx
+#ac_add_options --with-system-webp
+#ac_add_options --with-system-libevent
+#ac_add_options --with-system-zlib
+#ac_add_options --with-system-jpeg
 
 ac_add_options --enable-optimize=-O3
 ac_add_options OPT_LEVEL="3"
@@ -176,7 +187,7 @@ ac_add_options --enable-jxl
 ac_add_options --enable-av1
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-alsa
-ac_add_options --enable-jack
+#ac_add_options --enable-jack
 ac_add_options --enable-proxy-bypass-protection
 ac_add_options --disable-warnings-as-errors
 ac_add_options --disable-crashreporter
@@ -227,7 +238,7 @@ build() {
 
   echo "Building browser..."
 
-  xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" ./mach build
+  xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" ./mach build --priority normal
 }
 
 package() {
