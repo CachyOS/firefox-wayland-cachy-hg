@@ -40,7 +40,7 @@ makedepends=(
   #clang
   diffutils
   imake
-  inetutils
+  #inetutils
   jack
   #lld
   #llvm
@@ -143,12 +143,13 @@ ac_add_options --enable-lto=cross,full
 ac_add_options --disable-install-strip
 ac_add_options --disable-elf-hack
 ac_add_options --enable-bootstrap
+#ac_add_options --disable-bootstrap
 #ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 #ac_add_options --with-wasm-sandboxed-libraries
+ac_add_options --without-wasm-sandboxed-libraries
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-ac_add_options MOZ_PGO=1
+#ac_add_options MOZ_PGO=1
 ac_add_options MOZ_LTO=cross,full
-ac_add_options MOZ_USING_WASM_SANDBOXING=1
 
 #export AR=llvm-ar
 #export CC='clang'
@@ -238,7 +239,10 @@ build() {
 
   echo "Building browser..."
 
-  xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" ./mach build --priority normal
+  LLVM_PROFDATA=llvm-profdata JARLOG_FILE="$PWD/jarlog" \
+    dbus-run-session \
+    xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
+    ./mach build --priority normal
 }
 
 package() {
