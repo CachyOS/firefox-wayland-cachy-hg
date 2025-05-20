@@ -48,8 +48,8 @@ makedepends=(
   nasm
   nodejs
   python
-  rustup
-  #rust
+  #rustup
+  rust
   unzip
   #wasi-compiler-rt
   #wasi-libc
@@ -59,6 +59,7 @@ makedepends=(
   yasm
   zip
   pciutils
+  libxml2-legacy
 )
 optdepends=(
   'hunspell-en_US: Spell checking, American English'
@@ -106,11 +107,11 @@ pkgver() {
 prepare() {
   # we need it for bootstap build to be able to build with Firefox toolchain,
   # for some reason it doesn't bootstrap rust compiler
-  if ! rustc --version | grep stable  >/dev/null 2>&1; then
-    echo "Installing rust compiler…"
-    rustup toolchain install stable
-    rustup default stable
-  fi
+  #if ! rustc --version | grep stable  >/dev/null 2>&1; then
+  #  echo "Installing rust compiler…"
+  #  rustup toolchain install stable
+  #  rustup default stable
+  #fi
 
   mkdir mozbuild
   cd mozilla-unified
@@ -165,7 +166,7 @@ ac_add_options --with-unsigned-addon-scopes=app,system
 ac_add_options --allow-addon-sideload
 export MOZILLA_OFFICIAL=1
 export MOZ_APP_REMOTINGNAME=${_pkgname//-/}
-export NIGHTLY_BUILD=1
+#export NIGHTLY_BUILD=1
 export MOZ_REQUIRE_SIGNING=1
 
 # Keys
@@ -181,8 +182,8 @@ ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
 #ac_add_options --with-system-jpeg
 
 ac_add_options --enable-optimize=-O3
-ac_add_options OPT_LEVEL="3"
-ac_add_options RUSTC_OPT_LEVEL="3"
+#ac_add_options OPT_LEVEL="3"
+#ac_add_options RUSTC_OPT_LEVEL="3"
 # Features
 ac_add_options --enable-jxl
 ac_add_options --enable-av1
