@@ -14,36 +14,49 @@ pkgrel=1
 pkgdesc="Standalone web browser from mozilla.org (mozilla-unified hg, release branding, targeting wayland)"
 arch=(x86_64)
 url="https://www.mozilla.org/firefox/"
-license=(
-  GPL
-  LGPL
-  MPL
-)
+license=(MPL-2.0)
 depends=(
+  alsa-lib
+  at-spi2-core
+  bash
+  cairo
   dbus
   ffmpeg
+  fontconfig
+  freetype2
+  gcc-libs
+  gdk-pixbuf2
+  glib2
+  glibc
   gtk3
+  hicolor-icon-theme
   libevent
   libjpeg
   libpulse
   libvpx
   libwebp
+  libx11
+  libxcb
+  libxcomposite
+  libxdamage
+  libxext
+  libxfixes
+  libxrandr
   libxss
   libxt
   mime-types
+  pango
   ttf-font
-  zlib
 )
 makedepends=(
   git-cinnabar
   cbindgen
-  #clang
+  clang
   diffutils
   imake
-  #inetutils
   jack
-  #lld
-  #llvm
+  lld
+  llvm
   mesa
   nasm
   nodejs
@@ -51,15 +64,13 @@ makedepends=(
   #rustup
   rust
   unzip
-  #wasi-compiler-rt
-  #wasi-libc
-  #wasi-libc++
-  #wasi-libc++abi
+  wasi-compiler-rt
+  wasi-libc
+  wasi-libc++
+  wasi-libc++abi
   xorg-server-xvfb
   yasm
   zip
-  pciutils
-  libxml2-legacy
 )
 optdepends=(
   'hunspell-en_US: Spell checking, American English'
@@ -129,7 +140,7 @@ prepare() {
 
   cat >.mozconfig <<END
 ac_add_options --enable-application=browser
-ac_add_options --disable-artifact-builds
+#ac_add_options --disable-artifact-builds
 mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 
 ac_add_options --prefix=/usr
@@ -142,21 +153,20 @@ ac_add_options --enable-linker=lld
 ac_add_options --enable-lto=cross,full
 #ac_add_options --enable-linker=gold
 ac_add_options --disable-install-strip
-ac_add_options --disable-elf-hack
-ac_add_options --enable-bootstrap
-#ac_add_options --disable-bootstrap
-#ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
+#ac_add_options --enable-bootstrap
+ac_add_options --disable-bootstrap
+ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 #ac_add_options --with-wasm-sandboxed-libraries
-ac_add_options --without-wasm-sandboxed-libraries
+#ac_add_options --without-wasm-sandboxed-libraries
 ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
-#ac_add_options MOZ_PGO=1
+ac_add_options MOZ_PGO=1
 ac_add_options MOZ_LTO=cross,full
 
-#export AR=llvm-ar
-#export CC='clang'
-#export CXX='clang++'
-#export NM=llvm-nm
-#export RANLIB=llvm-ranlib
+export AR=llvm-ar
+export CC='clang'
+export CXX='clang++'
+export NM=llvm-nm
+export RANLIB=llvm-ranlib
 
 # Branding
 ac_add_options --enable-official-branding
@@ -175,11 +185,9 @@ ac_add_options --with-google-safebrowsing-api-keyfile=${PWD@Q}/google-api-key
 ac_add_options --with-mozilla-api-keyfile=${PWD@Q}/mozilla-api-key
 
 # System libraries
-#ac_add_options --with-system-libvpx
-#ac_add_options --with-system-webp
-#ac_add_options --with-system-libevent
-#ac_add_options --with-system-zlib
-#ac_add_options --with-system-jpeg
+ac_add_options --with-system-libvpx
+ac_add_options --with-system-webp
+ac_add_options --with-system-libevent
 
 ac_add_options --enable-optimize=-O3
 #ac_add_options OPT_LEVEL="3"
@@ -220,20 +228,26 @@ END
 build() {
   cd mozilla-unified
 
+  export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
+
   export MOZ_SOURCE_REPO="$_repo"
   export MOZ_SOURCE_CHANGESET="$(cd $SRCDEST/mozilla-unified; git cinnabar git2hg bookmarks/autoland)"
   export MOZBUILD_STATE_PATH="$srcdir/mozbuild"
   export MOZ_BUILD_DATE="$(date -u${SOURCE_DATE_EPOCH:+d @$SOURCE_DATE_EPOCH} +%Y%m%d%H%M%S)"
   export MOZ_NOSPAM=1
 
+  # Work around https://bugzilla.mozilla.org/show_bug.cgi?id=1969383
+  export RUST_MIN_STACK=16777216
+
   export LIBGL_ALWAYS_SOFTWARE=true
 
   # malloc_usable_size is used in various parts of the codebase
-  export CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
-  export CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+  CFLAGS="${CFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
+  CXXFLAGS="${CXXFLAGS/_FORTIFY_SOURCE=3/_FORTIFY_SOURCE=2}"
 
-  export CFLAGS="${CFLAGS/-fexceptions/-fno-exceptions}"
-  export CXXFLAGS="${CXXFLAGS/-fexceptions/-fno-exceptions}"
+  # Breaks compilation since https://bugzilla.mozilla.org/show_bug.cgi?id=1896066
+  CFLAGS="${CFLAGS/-fexceptions/}"
+  CXXFLAGS="${CXXFLAGS/-fexceptions/}"
 
   # LTO/PGO needs more open files
   ulimit -n 4096
