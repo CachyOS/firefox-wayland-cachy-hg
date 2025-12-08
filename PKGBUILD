@@ -35,15 +35,6 @@ depends=(
   libpulse
   libvpx
   libwebp
-  libx11
-  libxcb
-  libxcomposite
-  libxdamage
-  libxext
-  libxfixes
-  libxrandr
-  libxss
-  libxt
   mime-types
   pango
   ttf-font
@@ -63,12 +54,12 @@ makedepends=(
   python
   #rustup
   rust
+  tinywl
   unzip
   wasi-compiler-rt
   wasi-libc
   wasi-libc++
   wasi-libc++abi
-  xorg-server-xvfb
   yasm
   zip
 )
@@ -136,7 +127,17 @@ prepare() {
   #
   # If you want to disable LTO/PGO (compile too long), delete the lines below beginning with
   # `ac_add_options --enable-lto' and ending with 'export RANLIB=llvm-ranlib`
-  #
+  # Unset variables to prevent issues with PGO profiling
+  unset \
+    DBUS_SESSION_BUS_ADDRESS \
+    DISPLAY \
+    ORBIT_SOCKETDIR \
+    SESSION_MANAGER \
+    XAUTHORITY \
+    XDG_CACHE_HOME \
+    XDG_SESSION_COOKIE
+
+  export LLVM_PROFDATA="llvm-profdata"
 
   cat >.mozconfig <<END
 ac_add_options --enable-application=browser
@@ -158,7 +159,7 @@ ac_add_options --disable-bootstrap
 ac_add_options --with-wasi-sysroot=/usr/share/wasi-sysroot
 #ac_add_options --with-wasm-sandboxed-libraries
 #ac_add_options --without-wasm-sandboxed-libraries
-ac_add_options --enable-default-toolkit=cairo-gtk3-wayland
+ac_add_options --enable-default-toolkit=cairo-gtk3-wayland-only
 ac_add_options MOZ_PGO=1
 ac_add_options MOZ_LTO=cross,full
 
@@ -226,6 +227,8 @@ END
 }
 
 build() {
+  local VIRTWL VIRTWL_PID
+
   cd mozilla-unified
 
   export MACH_BUILD_PYTHON_NATIVE_PACKAGE_SOURCE=pip
@@ -254,10 +257,23 @@ build() {
 
   echo "Building browser..."
 
-  LLVM_PROFDATA=llvm-profdata JARLOG_FILE="$PWD/jarlog" \
-    dbus-run-session \
-    xvfb-run -s "-screen 0 1920x1080x24 -nolisten local" \
-    ./mach build --priority normal
+  # Export XDG_RUNTIME_DIR for tinywl
+  XDG_RUNTIME_DIR="/tmp/$(id -u)-runtime-dir"
+  mkdir -pm 0700 "$XDG_RUNTIME_DIR"
+  export XDG_RUNTIME_DIR
+
+  # Run tinywl compositor for PGO profiling
+  coproc VIRTWL {
+    WLR_RENDERER=pixman WLR_BACKENDS=headless \
+      exec dbus-run-session -- tinywl -s 'echo $WAYLAND_DISPLAY; read _; kill $PPID'
+  }
+  local -x WAYLAND_DISPLAY
+  read WAYLAND_DISPLAY <&${VIRTWL[0]}
+
+  ./mach build
+
+  exec {VIRTWL[0]}<&- {VIRTWL[1]}>&-
+  rm -rf "${XDG_RUNTIME_DIR}"
 }
 
 package() {
