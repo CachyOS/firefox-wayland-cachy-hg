@@ -124,21 +124,6 @@ prepare() {
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
 
-  #
-  # If you want to disable LTO/PGO (compile too long), delete the lines below beginning with
-  # `ac_add_options --enable-lto' and ending with 'export RANLIB=llvm-ranlib`
-  # Unset variables to prevent issues with PGO profiling
-  unset \
-    DBUS_SESSION_BUS_ADDRESS \
-    DISPLAY \
-    ORBIT_SOCKETDIR \
-    SESSION_MANAGER \
-    XAUTHORITY \
-    XDG_CACHE_HOME \
-    XDG_SESSION_COOKIE
-
-  export LLVM_PROFDATA="llvm-profdata"
-
   cat >.mozconfig <<END
 ac_add_options --enable-application=browser
 #ac_add_options --disable-artifact-builds
@@ -227,6 +212,18 @@ END
 }
 
 build() {
+  # If you want to disable LTO/PGO (compile too long), delete the lines
+  # `ac_add_options --enable-lto' and ending with 'export RANLIB=llvm-ranlib`
+  # Unset variables to prevent issues with PGO profiling
+  unset \
+    DBUS_SESSION_BUS_ADDRESS \
+    DISPLAY \
+    ORBIT_SOCKETDIR \
+    SESSION_MANAGER \
+    XAUTHORITY \
+    XDG_CACHE_HOME \
+    XDG_SESSION_COOKIE
+
   local VIRTWL VIRTWL_PID
 
   cd mozilla-unified
@@ -258,9 +255,8 @@ build() {
   echo "Building browser..."
 
   # Export XDG_RUNTIME_DIR for tinywl
-  XDG_RUNTIME_DIR="/tmp/$(id -u)-runtime-dir"
+  export XDG_RUNTIME_DIR="/tmp/$(id -u)-runtime-dir"
   mkdir -pm 0700 "$XDG_RUNTIME_DIR"
-  export XDG_RUNTIME_DIR
 
   # Run tinywl compositor for PGO profiling
   coproc VIRTWL {
@@ -270,7 +266,8 @@ build() {
   local -x WAYLAND_DISPLAY
   read WAYLAND_DISPLAY <&${VIRTWL[0]}
 
-  ./mach build
+  LLVM_PROFDATA=llvm-profdata JARLOG_FILE="$PWD/jarlog" \
+  ./mach build --priority normal
 
   exec {VIRTWL[0]}<&- {VIRTWL[1]}>&-
   rm -rf "${XDG_RUNTIME_DIR}"
