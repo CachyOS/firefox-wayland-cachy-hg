@@ -24,12 +24,14 @@ depends=(
   ffmpeg
   fontconfig
   freetype2
-  gcc-libs
   gdk-pixbuf2
   glib2
   glibc
   gtk3
   hicolor-icon-theme
+  libgcc
+  libpulse
+  libstdc++
   libevent
   libjpeg
   libpulse
@@ -51,6 +53,7 @@ makedepends=(
   mesa
   nasm
   nodejs
+  onnxruntime
   python
   #rustup
   rust
@@ -67,6 +70,8 @@ optdepends=(
   'hunspell-en_US: Spell checking, American English'
   'libnotify: Notification integration'
   'networkmanager: Location detection via available WiFi networks'
+  'onnxruntime: Local machine learning features such as smart tab groups'
+  'python: DMD (Dark Matter Detector) heap profiling'
   'speech-dispatcher: Text-to-Speech'
   'xdg-desktop-portal: Screensharing with Wayland'
 )
@@ -83,12 +88,18 @@ source=(
   "mozilla-unified::git+hg::$_repo#branch=bookmarks/autoland"
   $_pkgname.desktop
   $_pkgname-symbolic.svg
+  0001-Install-under-remoting-name.patch
+  0002-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
+  0003-Use-wasm32-wasip1-target.patch
 )
 sha256sums=('SKIP'
             'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33'
-            '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
+            '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797'
+            'a7364ddb3b6eab922873f35731ed5cfb61e8022a35d54edd2f80b95a4f5625ed'
+            'dbc0920dfc80646505f1f9729bda84206f460d5fed02eb47d7f36c9b289682de'
+            'baad79216200df4ea05a0e5ca26e0c56c4d4a3cd2149d32f15dc8b7c724376ba')
 
-# Google API keys (see http://www.chromium.org/developers/how-tos/api-keys)
+# Google API keys (see https://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
 # get your own set of keys. Feel free to contact foutrelis@archlinux.org for
 # more information.
@@ -102,8 +113,8 @@ _mozilla_api_key=16674381-f021-49de-8622-3021c5942aff
 
 pkgver() {
   cd mozilla-unified
-  _pkgver=$(cat browser/config/version.txt)
-  printf "${_pkgver}.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
+  local version=$(<browser/config/version_display.txt)
+  printf "${version}.r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short=7 HEAD)"
 }
 
 prepare() {
@@ -119,14 +130,23 @@ prepare() {
   cd mozilla-unified
 
   # EVENT__SIZEOF_TIME_T does not exist on upstream libevent, see event-config.h.cmake
-  sed -i '/CHECK_EVENT_SIZEOF(TIME_T, time_t);/d' ipc/chromium/src/base/message_pump_libevent.cc
+  #sed -i '/CHECK_EVENT_SIZEOF(TIME_T, time_t);/d' ipc/chromium/src/base/message_pump_libevent.cc
+
+  # Make different channels installable in parallel
+  #patch -Np1 -i ../0001-Install-under-remoting-name.patch
+
+  # Fix build with glibc 2.43
+  # https://bugzilla.mozilla.org/show_bug.cgi?id=1999625
+  patch -Np1 -i ../0002-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
+
+  # Fix build with Clang 22
+  patch -Np1 -i ../0003-Use-wasm32-wasip1-target.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
 
   cat >.mozconfig <<END
 ac_add_options --enable-application=browser
-#ac_add_options --disable-artifact-builds
 mk_add_options MOZ_OBJDIR=${PWD@Q}/obj
 
 ac_add_options --prefix=/usr
@@ -180,10 +200,10 @@ ac_add_options --enable-optimize=-O3
 #ac_add_options RUSTC_OPT_LEVEL="3"
 # Features
 ac_add_options --enable-jxl
-ac_add_options --enable-av1
+#ac_add_options --enable-av1
 ac_add_options --enable-pulseaudio
 ac_add_options --enable-alsa
-#ac_add_options --enable-jack
+ac_add_options --enable-jack
 ac_add_options --enable-proxy-bypass-protection
 ac_add_options --disable-warnings-as-errors
 ac_add_options --disable-crashreporter
@@ -276,9 +296,9 @@ build() {
 package() {
   cd mozilla-unified
   DESTDIR="$pkgdir" ./mach install
+  local appdir="$pkgdir/usr/lib/$_pkgname"
 
-  _vendorjs="$pkgdir/usr/lib/$_pkgname/browser/defaults/preferences/vendor.js"
-  install -Dm644 /dev/stdin "$_vendorjs" <<END
+  install -Dvm644 /dev/stdin "$appdir/browser/defaults/preferences/vendor.js" <<END
 // Use LANG environment variable to choose locale
 pref("intl.locale.requested", "");
 
@@ -288,7 +308,7 @@ pref("spellchecker.dictionary_path", "/usr/share/hunspell");
 // Disable default browser checking.
 pref("browser.shell.checkDefaultBrowser", false);
 
-// Don't disable our bundled extensions in the application directory
+// Don't disable extensions in the application directory
 pref("extensions.autoDisableScopes", 11);
 pref("extensions.shownSelectionUI", true);
 
@@ -302,8 +322,7 @@ pref("browser.aboutConfig.showWarning", false);
 pref("services.settings.main.search-telemetry-v2.last_check", $(date +%s));
 END
 
-  _distini="$pkgdir/usr/lib/$_pkgname/distribution/distribution.ini"
-  install -Dm644 /dev/stdin "$_distini" <<END
+  install -Dvm644 /dev/stdin "$appdir/distribution/distribution.ini" <<END
 [Global]
 id=archlinux
 version=1.0
@@ -315,22 +334,27 @@ app.distributor.channel=$_pkgname
 app.partner.archlinux=archlinux
 END
 
+  # Link up system ONNX runtime
+  ln -srv "$pkgdir/usr/lib/libonnxruntime.so" -t "$appdir"
+
+  # Install desktop icons and metadata
+  local i theme=official
   for i in 16 22 24 32 48 64 128 256; do
-    install -Dm644 browser/branding/official/default$i.png \
-      "$pkgdir/usr/share/icons/hicolor/${i}x${i}/apps/$_pkgname.png"
+    install -Dvm644 browser/branding/$theme/default$i.png \
+      "$pkgdir/usr/share/icons/hicolor/${i}x${i}/apps/$pkgname.png"
   done
-  install -Dm644 browser/branding/official/content/about-logo.png \
-    "$pkgdir/usr/share/icons/hicolor/192x192/apps/$_pkgname.png"
-  install -Dm644 browser/branding/official/content/about-logo@2x.png \
-    "$pkgdir/usr/share/icons/hicolor/384x384/apps/$_pkgname.png"
-  install -Dm644 ../firefox-symbolic.svg \
+  install -Dvm644 browser/branding/$theme/content/about-logo.png \
+    "$pkgdir/usr/share/icons/hicolor/192x192/apps/$pkgname.png"
+  install -Dvm644 browser/branding/$theme/content/about-logo@2x.png \
+    "$pkgdir/usr/share/icons/hicolor/384x384/apps/$pkgname.png"
+  install -Dvm644 ../firefox-symbolic.svg \
     "$pkgdir/usr/share/icons/hicolor/symbolic/apps/$_pkgname-symbolic.svg"
 
   install -Dm644 ../$_pkgname.desktop \
     "$pkgdir/usr/share/applications/$_pkgname.desktop"
 
   # Install a wrapper to avoid confusion about binary path
-  install -Dm755 /dev/stdin "$pkgdir/usr/bin/$_pkgname" <<END
+  install -Dvm755 /dev/stdin "$pkgdir/usr/bin/$_pkgname" <<END
 #!/bin/sh
 exec /usr/lib/$_pkgname/firefox "\$@"
 END
@@ -341,4 +365,4 @@ END
     "$pkgdir/usr/lib/$_pkgname/firefox-bin"
 }
 
-# vim:set sw=2 et:
+# vim:set sw=2 sts=-1 et:
