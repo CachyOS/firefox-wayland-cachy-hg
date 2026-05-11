@@ -89,15 +89,11 @@ source=(
   $_pkgname.desktop
   $_pkgname-symbolic.svg
   0001-Install-under-remoting-name.patch
-  0002-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
-  0003-Use-wasm32-wasip1-target.patch
 )
 sha256sums=('SKIP'
             'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797'
-            'a7364ddb3b6eab922873f35731ed5cfb61e8022a35d54edd2f80b95a4f5625ed'
-            'dbc0920dfc80646505f1f9729bda84206f460d5fed02eb47d7f36c9b289682de'
-            'baad79216200df4ea05a0e5ca26e0c56c4d4a3cd2149d32f15dc8b7c724376ba')
+            'a7364ddb3b6eab922873f35731ed5cfb61e8022a35d54edd2f80b95a4f5625ed')
 
 # Google API keys (see https://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
@@ -134,13 +130,6 @@ prepare() {
 
   # Make different channels installable in parallel
   #patch -Np1 -i ../0001-Install-under-remoting-name.patch
-
-  # Fix build with glibc 2.43
-  # https://bugzilla.mozilla.org/show_bug.cgi?id=1999625
-  patch -Np1 -i ../0002-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
-
-  # Fix build with Clang 22
-  patch -Np1 -i ../0003-Use-wasm32-wasip1-target.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key

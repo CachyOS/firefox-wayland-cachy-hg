@@ -68,13 +68,9 @@ pkgbase = firefox-wayland-cachy-hg
 	source = firefox.desktop
 	source = firefox-symbolic.svg
 	source = 0001-Install-under-remoting-name.patch
-	source = 0002-Patch-glsl-optimizer-to-build-with-glibc-2.43.patch
-	source = 0003-Use-wasm32-wasip1-target.patch
 	sha256sums = SKIP
 	sha256sums = a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33
 	sha256sums = 9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797
 	sha256sums = a7364ddb3b6eab922873f35731ed5cfb61e8022a35d54edd2f80b95a4f5625ed
-	sha256sums = dbc0920dfc80646505f1f9729bda84206f460d5fed02eb47d7f36c9b289682de
-	sha256sums = baad79216200df4ea05a0e5ca26e0c56c4d4a3cd2149d32f15dc8b7c724376ba
 
 pkgname = firefox-wayland-cachy-hg
