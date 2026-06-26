@@ -34,7 +34,6 @@ depends=(
   libstdc++
   libevent
   libjpeg
-  libpulse
   libvpx
   libwebp
   mime-types
@@ -42,6 +41,7 @@ depends=(
   ttf-font
 )
 makedepends=(
+  git
   git-cinnabar
   cbindgen
   clang
@@ -88,12 +88,10 @@ source=(
   "mozilla-unified::git+hg::$_repo#branch=bookmarks/autoland"
   $_pkgname.desktop
   $_pkgname-symbolic.svg
-  0001-Install-under-remoting-name.patch
 )
 sha256sums=('SKIP'
             'cce5d87813df355555ac21f1edbe9c13442af7dc62a73c9a3ebc851883ba5883'
-            '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797'
-            'a7364ddb3b6eab922873f35731ed5cfb61e8022a35d54edd2f80b95a4f5625ed')
+            '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797')
 
 # Google API keys (see https://www.chromium.org/developers/how-tos/api-keys)
 # Note: These are for Arch Linux use ONLY. For your own distribution, please
@@ -127,9 +125,6 @@ prepare() {
 
   # EVENT__SIZEOF_TIME_T does not exist on upstream libevent, see event-config.h.cmake
   #sed -i '/CHECK_EVENT_SIZEOF(TIME_T, time_t);/d' ipc/chromium/src/base/message_pump_libevent.cc
-
-  # Make different channels installable in parallel
-  #patch -Np1 -i ../0001-Install-under-remoting-name.patch
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
@@ -286,6 +281,7 @@ package() {
   cd mozilla-unified
   DESTDIR="$pkgdir" ./mach install
   local appdir="$pkgdir/usr/lib/$_pkgname"
+  touch "$appdir/is-packaged-app"
 
   install -Dvm644 /dev/stdin "$appdir/browser/defaults/preferences/vendor.js" <<END
 // Use LANG environment variable to choose locale
