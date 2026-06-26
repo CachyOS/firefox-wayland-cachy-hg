@@ -91,7 +91,7 @@ source=(
   0001-Install-under-remoting-name.patch
 )
 sha256sums=('SKIP'
-            'a9e5264257041c0b968425b5c97436ba48e8d294e1a0f02c59c35461ea245c33'
+            'cce5d87813df355555ac21f1edbe9c13442af7dc62a73c9a3ebc851883ba5883'
             '9a1a572dc88014882d54ba2d3079a1cf5b28fa03c5976ed2cb763c93dabbd797'
             'a7364ddb3b6eab922873f35731ed5cfb61e8022a35d54edd2f80b95a4f5625ed')
 
