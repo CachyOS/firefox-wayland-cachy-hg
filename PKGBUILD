@@ -32,8 +32,8 @@ depends=(
   libgcc
   libpulse
   libstdc++
-  libevent
-  libjpeg
+  libevent.so
+  libjpeg.so
   libvpx
   libwebp
   mime-types
