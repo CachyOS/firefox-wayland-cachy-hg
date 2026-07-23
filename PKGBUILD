@@ -57,7 +57,7 @@ makedepends=(
   python
   #rustup
   rust
-  tinywl
+  cage
   unzip
   wasi-compiler-rt
   wasi-libc
@@ -258,14 +258,14 @@ build() {
 
   echo "Building browser..."
 
-  # Export XDG_RUNTIME_DIR for tinywl
+  # Export XDG_RUNTIME_DIR for cage
   export XDG_RUNTIME_DIR="/tmp/$(id -u)-runtime-dir"
   mkdir -pm 0700 "$XDG_RUNTIME_DIR"
 
-  # Run tinywl compositor for PGO profiling
+  # Run cage compositor for PGO profiling
   coproc VIRTWL {
     WLR_RENDERER=pixman WLR_BACKENDS=headless \
-      exec dbus-run-session -- tinywl -s 'echo $WAYLAND_DISPLAY; read _; kill $PPID'
+      exec dbus-run-session -- cage -- sh -c 'echo $WAYLAND_DISPLAY; read _; kill $PPID'
   }
   local -x WAYLAND_DISPLAY
   read WAYLAND_DISPLAY <&${VIRTWL[0]}
