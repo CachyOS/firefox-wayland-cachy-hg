@@ -53,6 +53,7 @@ makedepends=(
   mesa
   nasm
   nodejs
+  npm
   onnxruntime
   python
   #rustup
@@ -67,7 +68,7 @@ makedepends=(
   zip
 )
 optdepends=(
-  'hunspell-en_US: Spell checking, American English'
+  'hunspell-dictionary: Spell checking'
   'libnotify: Notification integration'
   'networkmanager: Location detection via available WiFi networks'
   'onnxruntime: Local machine learning features such as smart tab groups'
@@ -123,8 +124,6 @@ prepare() {
   mkdir mozbuild
   cd mozilla-unified
 
-  # EVENT__SIZEOF_TIME_T does not exist on upstream libevent, see event-config.h.cmake
-  #sed -i '/CHECK_EVENT_SIZEOF(TIME_T, time_t);/d' ipc/chromium/src/base/message_pump_libevent.cc
 
   echo -n "$_google_api_key" >google-api-key
   echo -n "$_mozilla_api_key" >mozilla-api-key
@@ -207,6 +206,7 @@ ac_add_options --disable-webspeechtestbackend
 mk_add_options MOZ_CRASHREPORTER=0
 mk_add_options MOZ_DATA_REPORTING=0
 mk_add_options MOZ_SERVICES_HEALTHREPORT=0
+mk_add_options MOZ_NORMANDY=0
 mk_add_options MOZ_TELEMETRY_REPORTING=0
 END
 
