@@ -21,7 +21,7 @@ depends=(
   bash
   cairo
   dbus
-  ffmpeg
+  ffmpeg4.4
   fontconfig
   freetype2
   gdk-pixbuf2
